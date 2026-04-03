@@ -29,7 +29,8 @@ public class TxService {
 
     @Transactional
     public void saveIfNew(String txHash, String from, String to,
-                          BigInteger valueRaw, Long blockNumber, Long blockTimestampSec) {
+                          BigInteger valueRaw, Long blockNumber, Long blockTimestampSec,
+                          String tokenName) {
 
         if (repository.existsByTxHash(txHash)) {
             log.debug("Tx already exists: {}", txHash);
@@ -46,12 +47,13 @@ public class TxService {
                 .toAddress(to)
                 .valueRaw(valueRaw.toString())
                 .valueUsdt(valueUsdt)
+                .tokenName(tokenName)
                 .blockNumber(blockNumber)
                 .blockTimestamp(blockTime)
                 .build();
 
         repository.save(tx);
-        log.info("Saved tx: {} | {} USDT | block {}", txHash, valueUsdt, blockNumber);
+        log.info("Saved tx: {} | {} {} | block {}", txHash, valueUsdt, tokenName, blockNumber);
 
         TxDTO dto = TxDTO.from(tx);
         messagingTemplate.convertAndSend("/topic/transfers", dto);

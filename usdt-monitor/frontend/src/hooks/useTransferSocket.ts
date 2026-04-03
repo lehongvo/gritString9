@@ -8,6 +8,7 @@ export type TxDTO = {
   fromAddress: string
   toAddress: string
   valueUsdt: number
+  tokenName: string
   blockNumber: number
   blockTimestamp: string
   createdAt: string

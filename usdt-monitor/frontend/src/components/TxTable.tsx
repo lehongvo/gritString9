@@ -37,7 +37,7 @@ export function TxTable({ transactions, isLoading, newTxHashes }: Props) {
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            {['Tx Hash', 'From', 'To', 'Amount (USDT)', 'Block', 'Time'].map((h) => (
+            {['Tx Hash', 'From', 'To', 'Token', 'Amount', 'Block', 'Time'].map((h) => (
               <th
                 key={h}
                 className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
@@ -83,12 +83,16 @@ export function TxTable({ transactions, isLoading, newTxHashes }: Props) {
                   {shortAddr(tx.toAddress)}
                 </a>
               </td>
+              <td className="px-4 py-3 text-sm">
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 whitespace-nowrap">
+                  {tx.tokenName || 'USDT'}
+                </span>
+              </td>
               <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                 {Number(tx.valueUsdt).toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
-                })}{' '}
-                <span className="font-normal text-gray-500 text-xs">USDT</span>
+                })}
               </td>
               <td className="px-4 py-3 text-sm text-gray-500">
                 #{tx.blockNumber.toLocaleString()}

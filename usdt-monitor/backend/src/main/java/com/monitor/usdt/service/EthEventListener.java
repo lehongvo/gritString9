@@ -13,7 +13,9 @@ import org.web3j.protocol.core.methods.response.EthLog;
 import org.web3j.protocol.core.methods.response.Log;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -24,9 +26,6 @@ public class EthEventListener {
     private final Web3j web3j;
     private final TxService txService;
 
-    @Value("${ethereum.usdt-contract}")
-    private String usdtContract;
-
     @Value("${ethereum.transfer-topic}")
     private String transferTopic;
 
@@ -34,6 +33,20 @@ public class EthEventListener {
     private int blockLag;
 
     private final AtomicLong lastProcessedBlock = new AtomicLong(0);
+
+    private static final List<String> CONTRACTS = Arrays.asList(
+        "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "0x1cdd2eab61112697626f7b4bb0e23da4febf7b7c",
+        "0x58efe15c0404ab22f87e4495d71f6f2077e862be",
+        "0xf650c3d88d12db855b8bf7d11be6c55a4e07dcc9"
+    );
+
+    private static final Map<String, String> TOKEN_NAMES = Map.of(
+        "0xdac17f958d2ee523a2206206994597c13d831ec7", "USDT",
+        "0x1cdd2eab61112697626f7b4bb0e23da4febf7b7c", "USDT (Wormhole)",
+        "0x58efe15c0404ab22f87e4495d71f6f2077e862be", "USDT (Solana IBC)",
+        "0xf650c3d88d12db855b8bf7d11be6c55a4e07dcc9", "cUSDT"
+    );
 
     @PostConstruct
     public void init() {
@@ -69,7 +82,7 @@ public class EthEventListener {
             EthFilter filter = new EthFilter(
                     DefaultBlockParameter.valueOf(BigInteger.valueOf(fromBlock)),
                     DefaultBlockParameter.valueOf(BigInteger.valueOf(safeBlock)),
-                    usdtContract
+                    CONTRACTS
             );
             filter.addSingleTopic(transferTopic);
 
@@ -112,13 +125,17 @@ public class EthEventListener {
             Long blockNumber = ethLog.getBlockNumber().longValue();
             Long blockTimestamp = getBlockTimestamp(blockNumber);
 
+            String contract = ethLog.getAddress().toLowerCase();
+            String tokenName = TOKEN_NAMES.getOrDefault(contract, "USDT");
+
             txService.saveIfNew(
                     ethLog.getTransactionHash(),
                     from.toLowerCase(),
                     to.toLowerCase(),
                     value,
                     blockNumber,
-                    blockTimestamp
+                    blockTimestamp,
+                    tokenName
             );
 
         } catch (Exception e) {

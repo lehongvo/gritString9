@@ -12,6 +12,7 @@ public class TxDTO {
     private String fromAddress;
     private String toAddress;
     private BigDecimal valueUsdt;
+    private String tokenName;
     private Long blockNumber;
     private LocalDateTime blockTimestamp;
     private LocalDateTime createdAt;
@@ -23,6 +24,7 @@ public class TxDTO {
                 .fromAddress(tx.getFromAddress())
                 .toAddress(tx.getToAddress())
                 .valueUsdt(tx.getValueUsdt())
+                .tokenName(tx.getTokenName())
                 .blockNumber(tx.getBlockNumber())
                 .blockTimestamp(tx.getBlockTimestamp())
                 .createdAt(tx.getCreatedAt())
