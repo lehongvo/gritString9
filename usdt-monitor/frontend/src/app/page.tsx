@@ -13,19 +13,19 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
+  const [totalElements, setTotalElements] = useState(0)
   const [newTxCount, setNewTxCount] = useState(0)
   const [newTxHashes, setNewTxHashes] = useState<Set<string>>(new Set())
   const flashTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const fetchTransactions = useCallback(async (p = 0) => {
     try {
-      const res = await fetch(
-        `${API_URL}/api/transactions?page=${p}&size=${PAGE_SIZE}`
-      )
+      const res = await fetch(`${API_URL}/api/transactions?page=${p}&size=${PAGE_SIZE}`)
       if (!res.ok) throw new Error('Fetch failed')
       const data = await res.json()
       setTransactions(data.content)
       setTotalPages(data.totalPages)
+      setTotalElements(data.totalElements)
     } catch (e) {
       console.error('Fetch error:', e)
     } finally {
@@ -33,9 +33,7 @@ export default function HomePage() {
     }
   }, [])
 
-  useEffect(() => {
-    fetchTransactions(0)
-  }, [fetchTransactions])
+  useEffect(() => { fetchTransactions(0) }, [fetchTransactions])
 
   const handleNewTx = useCallback((tx: TxDTO) => {
     if (page === 0) {
@@ -45,13 +43,9 @@ export default function HomePage() {
       })
       setNewTxHashes((prev) => new Set(prev).add(tx.txHash))
       const timer = setTimeout(() => {
-        setNewTxHashes((prev) => {
-          const next = new Set(prev)
-          next.delete(tx.txHash)
-          return next
-        })
+        setNewTxHashes((prev) => { const s = new Set(prev); s.delete(tx.txHash); return s })
         flashTimers.current.delete(tx.txHash)
-      }, 2000)
+      }, 2200)
       flashTimers.current.set(tx.txHash, timer)
     }
     setNewTxCount((n) => {
@@ -63,61 +57,96 @@ export default function HomePage() {
 
   const { connected } = useTransferSocket(handleNewTx)
 
+  const goToPage = (p: number) => {
+    setPage(p)
+    fetchTransactions(p)
+  }
+
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">USDT Transfer Monitor</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Ethereum Mainnet · Contract{' '}
-            <a
-              href="https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-blue-600 hover:underline"
-            >
-              0xdAC17F...31ec7
-            </a>
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {newTxCount > 0 && (
-            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-              +{newTxCount} new
+    <div className="min-h-screen bg-[#09090b] text-zinc-100">
+      {/* Top bar */}
+      <header className="border-b border-zinc-800/60 bg-[#09090b]/95 backdrop-blur sticky top-0 z-10">
+        <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-green-400 text-lg font-bold tracking-tight">USDT</span>
+              <span className="text-zinc-500 text-sm">Transfer Monitor</span>
+            </div>
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] text-zinc-700 border border-zinc-800 rounded px-2 py-0.5">
+              <span className="text-zinc-500">ETH Mainnet</span>
+              <span>·</span>
+              <a
+                href="https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-blue-500 hover:text-blue-400"
+              >
+                0xdAC17F…31ec7
+              </a>
             </span>
-          )}
-          <LiveBadge connected={connected} />
-        </div>
-      </div>
+          </div>
 
-      {/* Table Card */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <TxTable transactions={transactions} isLoading={isLoading} newTxHashes={newTxHashes} />
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 0 && (
-        <div className="mt-4 flex items-center justify-center gap-2">
-          <button
-            onClick={() => { setPage(p => p - 1); fetchTransactions(page - 1) }}
-            disabled={page === 0}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium disabled:opacity-40 hover:bg-gray-50"
-          >
-            Previous
-          </button>
-          <span className="text-sm text-gray-600">
-            Page {page + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => { setPage(p => p + 1); fetchTransactions(page + 1) }}
-            disabled={page >= totalPages - 1}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium disabled:opacity-40 hover:bg-gray-50"
-          >
-            Next
-          </button>
+          <div className="flex items-center gap-3">
+            {totalElements > 0 && (
+              <span className="text-xs text-zinc-600 font-mono tabular-nums">
+                {totalElements.toLocaleString()} txs
+              </span>
+            )}
+            {newTxCount > 0 && (
+              <span className="rounded-full bg-yellow-400/10 border border-yellow-400/20 px-2.5 py-0.5 text-xs font-semibold text-yellow-400 font-mono">
+                +{newTxCount} new
+              </span>
+            )}
+            <LiveBadge connected={connected} />
+          </div>
         </div>
-      )}
-    </main>
+      </header>
+
+      {/* Main */}
+      <main className="mx-auto max-w-7xl px-4 py-4">
+        {/* Stats row */}
+        <div className="mb-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'CONTRACTS', value: '4' },
+            { label: 'TOTAL TXS', value: totalElements.toLocaleString() },
+            { label: 'NEW (SESSION)', value: newTxCount.toLocaleString() },
+            { label: 'STATUS', value: connected ? 'LIVE' : 'OFFLINE', color: connected ? 'text-green-400' : 'text-red-400' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3">
+              <div className="text-[10px] text-zinc-600 tracking-widest mb-1">{label}</div>
+              <div className={`font-mono text-sm font-semibold ${color || 'text-zinc-200'}`}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Table */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 overflow-hidden">
+          <TxTable transactions={transactions} isLoading={isLoading} newTxHashes={newTxHashes} />
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 0 && (
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 0}
+              className="rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 text-xs font-semibold text-zinc-400 disabled:opacity-30 hover:border-zinc-600 hover:text-zinc-200 transition-colors"
+            >
+              ← PREV
+            </button>
+            <span className="font-mono text-xs text-zinc-600 px-2">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages - 1}
+              className="rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2 text-xs font-semibold text-zinc-400 disabled:opacity-30 hover:border-zinc-600 hover:text-zinc-200 transition-colors"
+            >
+              NEXT →
+            </button>
+          </div>
+        )}
+      </main>
+    </div>
   )
 }
