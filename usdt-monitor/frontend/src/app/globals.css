@@ -13,18 +13,21 @@ body {
 }
 
 @keyframes pump-row {
-  0%   { transform: translateX(-8px); background-color: rgba(250, 204, 21, 0.25); opacity: 0.8; }
-  10%  { transform: translateX(6px);  background-color: rgba(34, 197, 94, 0.2);  opacity: 1;   }
-  22%  { transform: translateX(-4px); background-color: rgba(250, 204, 21, 0.2); }
-  35%  { transform: translateX(3px);  background-color: rgba(34, 197, 94, 0.15); }
-  50%  { transform: translateX(-2px); background-color: rgba(250, 204, 21, 0.15); }
-  65%  { transform: translateX(1px);  background-color: rgba(34, 197, 94, 0.1);  }
-  80%  { transform: translateX(0);    background-color: rgba(250, 204, 21, 0.08); }
-  100% { transform: translateX(0);    background-color: transparent; }
+  0%   { transform: translateX(-28px); background-color: rgba(250, 204, 21, 0.55); opacity: 0.6; }
+  8%   { transform: translateX(22px);  background-color: rgba(34, 197, 94, 0.5);   opacity: 1;   }
+  16%  { transform: translateX(-18px); background-color: rgba(250, 204, 21, 0.45); }
+  24%  { transform: translateX(14px);  background-color: rgba(34, 197, 94, 0.4);   }
+  32%  { transform: translateX(-10px); background-color: rgba(250, 204, 21, 0.35); }
+  42%  { transform: translateX(7px);   background-color: rgba(34, 197, 94, 0.28);  }
+  52%  { transform: translateX(-4px);  background-color: rgba(250, 204, 21, 0.22); }
+  63%  { transform: translateX(2px);   background-color: rgba(34, 197, 94, 0.16);  }
+  75%  { transform: translateX(-1px);  background-color: rgba(250, 204, 21, 0.1);  }
+  88%  { transform: translateX(0);     background-color: rgba(34, 197, 94, 0.06);  }
+  100% { transform: translateX(0);     background-color: transparent; }
 }
 
 .row-flash-new {
-  animation: pump-row 2s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+  animation: pump-row 2.2s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
   will-change: transform, background-color;
 }
 
