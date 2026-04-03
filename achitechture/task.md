@@ -13,7 +13,7 @@ Xây dựng hệ thống monitor giao dịch transfer USDT trên Ethereum Mainne
 - **Frontend**: Next.js 14 (App Router) + TypeScript + TailwindCSS
 - **Database**: MySQL 8
 - **Deploy**: Docker + Docker Compose (local)
-- **RPC Endpoint**: https://eth.llamarpc.com
+- **RPC Endpoint**: https://eth.drpc.org
 
 ---
 

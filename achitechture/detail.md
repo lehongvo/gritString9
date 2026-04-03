@@ -20,7 +20,7 @@ Backend Java poll RPC → lưu MySQL → push WebSocket → FE Next.js hiển th
 ## Thông tin hệ thống (cố định, không thay đổi)
 
 ```
-RPC Endpoint  : https://eth.llamarpc.com
+RPC Endpoint  : https://eth.drpc.org
 USDT Contract : 0xdAC17F958D2ee523a2206206994597C13D831ec7
 Transfer topic: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
 USDT decimals : 6
@@ -124,7 +124,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/usdt_monitor?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: secret
-      WEB3J_RPC_URL: https://eth.llamarpc.com
+      WEB3J_RPC_URL: https://eth.drpc.org
     networks:
       - usdt-net
     restart: on-failure
@@ -305,7 +305,7 @@ spring.sql.init.schema-locations=classpath:schema.sql
 spring.task.scheduling.pool.size=2
 
 # Web3j
-web3j.rpc-url=${WEB3J_RPC_URL:https://eth.llamarpc.com}
+web3j.rpc-url=${WEB3J_RPC_URL:https://eth.drpc.org}
 
 # Ethereum config
 ethereum.usdt-contract=0xdAC17F958D2ee523a2206206994597C13D831ec7
