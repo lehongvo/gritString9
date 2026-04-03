@@ -17,19 +17,19 @@ function shortHash(hash: string) {
   return `${hash.slice(0, 8)}…${hash.slice(-6)}`
 }
 
-function amountColor(value: number): string {
-  if (value >= 100000) return 'text-red-400 font-bold'
-  if (value >= 10000)  return 'text-orange-400 font-bold'
-  if (value >= 1000)   return 'text-yellow-300 font-semibold'
+function amountClass(value: number): string {
+  if (value >= 100000) return 'text-red-400 font-bold amount-whale'
+  if (value >= 10000)  return 'text-orange-400 font-bold amount-large'
+  if (value >= 1000)   return 'text-yellow-300 font-semibold amount-mid'
   if (value >= 100)    return 'text-green-400 font-semibold'
-  return 'text-zinc-300'
+  return 'text-zinc-400'
 }
 
 function tokenBadgeStyle(name: string): string {
   if (name === 'USDT') return 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
   if (name.includes('Wormhole')) return 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
-  if (name.includes('Solana')) return 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
-  if (name.includes('cUSDT')) return 'bg-orange-500/15 text-orange-400 border border-orange-500/30'
+  if (name.includes('Solana'))   return 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+  if (name.includes('cUSDT'))    return 'bg-orange-500/15 text-orange-400 border border-orange-500/30'
   return 'bg-zinc-700/50 text-zinc-400 border border-zinc-600'
 }
 
@@ -53,7 +53,7 @@ export function TxTable({ transactions, isLoading, newTxHashes }: Props) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full">
+      <table className="min-w-full" style={{ transformStyle: 'preserve-3d' }}>
         <thead>
           <tr className="border-b border-zinc-800">
             {['TX HASH', 'FROM', 'TO', 'TOKEN', 'AMOUNT', 'BLOCK', 'TIME'].map((h) => (
@@ -64,15 +64,13 @@ export function TxTable({ transactions, isLoading, newTxHashes }: Props) {
           </tr>
         </thead>
         <tbody>
-          {transactions.map((tx, i) => {
+          {transactions.map((tx) => {
             const isNew = newTxHashes.has(tx.txHash)
             const amount = Number(tx.valueUsdt)
             return (
               <tr
                 key={tx.txHash}
-                className={`border-b border-zinc-900 transition-colors ${
-                  isNew ? 'row-flash-new' : 'hover:bg-zinc-900/60'
-                }`}
+                className={`border-b border-zinc-900 tx-row ${isNew ? 'row-flash-new' : ''}`}
               >
                 <td className="px-4 py-2.5">
                   <a
@@ -110,7 +108,7 @@ export function TxTable({ transactions, isLoading, newTxHashes }: Props) {
                   </span>
                 </td>
                 <td className="px-4 py-2.5">
-                  <span className={`font-mono text-sm tabular-nums ${amountColor(amount)}`}>
+                  <span className={`font-mono text-sm tabular-nums ${amountClass(amount)}`}>
                     {amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </td>

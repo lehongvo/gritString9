@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { TxTable } from '@/components/TxTable'
 import { LiveBadge } from '@/components/LiveBadge'
+import { WhaleExplosion } from '@/components/WhaleExplosion'
 import { useTransferSocket, TxDTO } from '@/hooks/useTransferSocket'
 
 const PAGE_SIZE = 20
@@ -16,6 +17,7 @@ export default function HomePage() {
   const [totalElements, setTotalElements] = useState(0)
   const [newTxCount, setNewTxCount] = useState(0)
   const [newTxHashes, setNewTxHashes] = useState<Set<string>>(new Set())
+  const [whaleAmount, setWhaleAmount] = useState<number | null>(null)
   const flashTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const fetchTransactions = useCallback(async (p = 0) => {
@@ -48,6 +50,9 @@ export default function HomePage() {
       }, 2200)
       flashTimers.current.set(tx.txHash, timer)
     }
+    if (Number(tx.valueUsdt) >= 10_000) {
+      setWhaleAmount(Number(tx.valueUsdt))
+    }
     setNewTxCount((n) => {
       const next = n + 1
       if (next % 10 === 0) fetchTransactions(page)
@@ -69,7 +74,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-green-400 text-lg font-bold tracking-tight">USDT</span>
+              <span className="shimmer-text text-lg font-bold tracking-tight">USDT</span>
               <span className="text-zinc-500 text-sm">Transfer Monitor</span>
             </div>
             <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] text-zinc-700 border border-zinc-800 rounded px-2 py-0.5">
@@ -112,7 +117,7 @@ export default function HomePage() {
             { label: 'NEW (SESSION)', value: newTxCount.toLocaleString() },
             { label: 'STATUS', value: connected ? 'LIVE' : 'OFFLINE', color: connected ? 'text-green-400' : 'text-red-400' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3">
+            <div key={label} className="stat-card rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3">
               <div className="text-[10px] text-zinc-600 tracking-widest mb-1">{label}</div>
               <div className={`font-mono text-sm font-semibold ${color || 'text-zinc-200'}`}>{value}</div>
             </div>
@@ -147,6 +152,12 @@ export default function HomePage() {
           </div>
         )}
       </main>
+      {whaleAmount !== null && (
+        <WhaleExplosion
+          amount={whaleAmount}
+          onDone={() => setWhaleAmount(null)}
+        />
+      )}
     </div>
   )
 }
