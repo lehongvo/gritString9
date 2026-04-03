@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { playForAmount } from '@/lib/SoundManager'
 
 type Props = { amount: number; onDone: () => void }
 
