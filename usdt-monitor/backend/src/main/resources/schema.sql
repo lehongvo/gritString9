@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS usdt_transactions (
   value_usdt      DECIMAL(28, 6) NOT NULL,
   block_number    BIGINT         NOT NULL,
   block_timestamp DATETIME       NOT NULL,
+  token_name      VARCHAR(32)    NOT NULL DEFAULT 'USDT',
   created_at      DATETIME       DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_tx_hash (tx_hash),
   INDEX idx_block_number (block_number),

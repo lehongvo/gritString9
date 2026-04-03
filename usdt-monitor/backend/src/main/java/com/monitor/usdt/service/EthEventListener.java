@@ -47,7 +47,12 @@ public class EthEventListener {
     @Scheduled(fixedDelayString = "${ethereum.poll-delay-ms:5000}")
     public void pollTransferEvents() {
         try {
-            BigInteger latestBlock = web3j.ethBlockNumber().send().getBlockNumber();
+            var ethBlockNum = web3j.ethBlockNumber().send();
+            if (ethBlockNum.hasError()) {
+                log.warn("ethBlockNumber error: {}", ethBlockNum.getError().getMessage());
+                return;
+            }
+            BigInteger latestBlock = ethBlockNum.getBlockNumber();
             long safeBlock = latestBlock.longValue() - blockLag;
 
             long fromBlock = lastProcessedBlock.get() == 0

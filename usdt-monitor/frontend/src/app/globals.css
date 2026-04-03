@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes flash-new {
+  0%   { background-color: #fef08a; }
+  25%  { background-color: #d1fae5; }
+  50%  { background-color: #fef08a; }
+  75%  { background-color: #d1fae5; }
+  100% { background-color: transparent; }
+}
+
+.row-flash-new {
+  animation: flash-new 1.6s ease-out forwards;
+}

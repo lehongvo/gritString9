@@ -29,6 +29,9 @@ public class UsdtTransaction {
     @Column(name = "value_usdt", nullable = false, precision = 28, scale = 6)
     private BigDecimal valueUsdt;
 
+    @Column(name = "token_name", nullable = false, length = 32)
+    private String tokenName;
+
     @Column(name = "block_number", nullable = false)
     private Long blockNumber;
 

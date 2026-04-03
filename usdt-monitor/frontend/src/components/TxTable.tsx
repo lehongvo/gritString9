@@ -4,6 +4,7 @@ import { TxDTO } from '@/hooks/useTransferSocket'
 type Props = {
   transactions: TxDTO[]
   isLoading: boolean
+  newTxHashes: Set<string>
 }
 
 function shortAddr(addr: string) {
@@ -14,7 +15,7 @@ function shortHash(hash: string) {
   return `${hash.slice(0, 8)}...${hash.slice(-6)}`
 }
 
-export function TxTable({ transactions, isLoading }: Props) {
+export function TxTable({ transactions, isLoading, newTxHashes }: Props) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-gray-400">
@@ -48,7 +49,10 @@ export function TxTable({ transactions, isLoading }: Props) {
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
           {transactions.map((tx) => (
-            <tr key={tx.txHash} className="hover:bg-gray-50 transition-colors">
+            <tr
+              key={tx.txHash}
+              className={`transition-colors ${newTxHashes.has(tx.txHash) ? 'row-flash-new' : 'hover:bg-gray-50'}`}
+            >
               <td className="px-4 py-3 font-mono text-sm">
                 <a
                   href={`https://etherscan.io/tx/${tx.txHash}`}

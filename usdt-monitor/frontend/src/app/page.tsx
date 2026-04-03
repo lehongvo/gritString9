@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { TxTable } from '@/components/TxTable'
 import { LiveBadge } from '@/components/LiveBadge'
 import { useTransferSocket, TxDTO } from '@/hooks/useTransferSocket'
@@ -14,6 +14,8 @@ export default function HomePage() {
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [newTxCount, setNewTxCount] = useState(0)
+  const [newTxHashes, setNewTxHashes] = useState<Set<string>>(new Set())
+  const flashTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const fetchTransactions = useCallback(async (p = 0) => {
     try {
@@ -41,9 +43,23 @@ export default function HomePage() {
         if (prev.find((t) => t.txHash === tx.txHash)) return prev
         return [tx, ...prev].slice(0, PAGE_SIZE)
       })
+      setNewTxHashes((prev) => new Set(prev).add(tx.txHash))
+      const timer = setTimeout(() => {
+        setNewTxHashes((prev) => {
+          const next = new Set(prev)
+          next.delete(tx.txHash)
+          return next
+        })
+        flashTimers.current.delete(tx.txHash)
+      }, 2000)
+      flashTimers.current.set(tx.txHash, timer)
     }
-    setNewTxCount((n) => n + 1)
-  }, [page])
+    setNewTxCount((n) => {
+      const next = n + 1
+      if (next % 10 === 0) fetchTransactions(page)
+      return next
+    })
+  }, [page, fetchTransactions])
 
   const { connected } = useTransferSocket(handleNewTx)
 
@@ -77,11 +93,11 @@ export default function HomePage() {
 
       {/* Table Card */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <TxTable transactions={transactions} isLoading={isLoading} />
+        <TxTable transactions={transactions} isLoading={isLoading} newTxHashes={newTxHashes} />
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {totalPages > 0 && (
         <div className="mt-4 flex items-center justify-center gap-2">
           <button
             onClick={() => { setPage(p => p - 1); fetchTransactions(page - 1) }}
