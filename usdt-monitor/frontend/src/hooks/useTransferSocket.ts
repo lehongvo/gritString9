@@ -27,7 +27,9 @@ export function useTransferSocket(
   const clientRef = useRef<Client | null>(null)
 
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080/ws'
+    // Use current hostname so mobile/remote devices work (not hardcoded localhost)
+    const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
+    const wsUrl = `http://${host}:8080/ws`
 
     const client = new Client({
       webSocketFactory: () => new SockJS(wsUrl),

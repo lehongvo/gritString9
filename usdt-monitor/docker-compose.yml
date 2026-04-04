@@ -35,6 +35,7 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: secret
       WEB3J_RPC_URL: https://eth.drpc.org
+      CORS_ALLOWED_ORIGINS: "*"
     networks:
       - usdt-net
     restart: on-failure
@@ -43,6 +44,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_WS_URL: http://localhost:8080/ws
     container_name: usdt-frontend
     ports:
       - "3000:3000"

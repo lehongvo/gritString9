@@ -8,6 +8,33 @@ function getCtx(): AudioContext {
   return ctx
 }
 
+/* Unlock AudioContext — iOS Safari requires playing a silent buffer inside the gesture */
+let unlocked = false
+
+function unlockAudio() {
+  if (unlocked) return
+  unlocked = true
+  const c = getCtx()
+  // Play a 1-sample silent buffer — required by iOS to fully unlock Web Audio
+  const buf = c.createBuffer(1, 1, 22050)
+  const src = c.createBufferSource()
+  src.buffer = buf
+  src.connect(c.destination)
+  src.start(0)
+  c.resume()
+}
+
+export function isAudioUnlocked() { return unlocked }
+
+if (typeof window !== 'undefined') {
+  const events = ['touchstart', 'touchend', 'click', 'keydown']
+  const handler = () => {
+    unlockAudio()
+    events.forEach(e => window.removeEventListener(e, handler))
+  }
+  events.forEach(e => window.addEventListener(e, handler, { passive: true }))
+}
+
 function playTone(freq: number, type: OscillatorType, duration: number,
   gainVal: number, fadeOut = true, delay = 0) {
   const c = getCtx()
@@ -134,12 +161,20 @@ export function playLegendary() {
 }
 
 export function playForAmount(amount: number) {
-  try {
-    if (amount >= 100_000) playLegendary()
-    else if (amount >= 50_000) playMegaWhale()
-    else if (amount >= 10_000) playWhaleAlert()
-    else playCashRain()
-  } catch (e) {
-    console.warn('Sound playback failed', e)
+  const c = getCtx()
+  const play = () => {
+    try {
+      if (amount >= 400_000) playLegendary()
+      else if (amount >= 200_000) playMegaWhale()
+      else if (amount >= 100_000) playWhaleAlert()
+      else playCashRain()
+    } catch (e) {
+      console.warn('Sound playback failed', e)
+    }
+  }
+  if (c.state === 'running') {
+    play()
+  } else {
+    c.resume().then(play).catch(() => {})
   }
 }

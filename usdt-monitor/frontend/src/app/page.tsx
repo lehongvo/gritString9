@@ -5,28 +5,55 @@ import { TxTable } from '@/components/TxTable'
 import { LiveBadge } from '@/components/LiveBadge'
 import { WhaleExplosion } from '@/components/WhaleExplosion'
 import { useTransferSocket, TxDTO } from '@/hooks/useTransferSocket'
+import { playForAmount, isAudioUnlocked } from '@/lib/SoundManager'
 
 const PAGE_SIZE = 20
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+// Use relative URL so Next.js rewrite proxy handles it — works from any device
+const API_URL = ''
 
-const STATS = (total: number, newCount: number, connected: boolean) => [
-  { label: 'CONTRACTS',    value: '4',                    icon: '📋', color: 'text-zinc-200' },
-  { label: 'TOTAL TXS',   value: total.toLocaleString(),  icon: '⛓',  color: 'text-blue-400' },
-  { label: 'NEW SESSION',  value: `+${newCount.toLocaleString()}`, icon: '⚡', color: 'text-yellow-400' },
-  { label: 'STATUS',       value: connected ? 'LIVE' : 'OFFLINE',  icon: connected ? '🟢' : '🔴',
-    color: connected ? 'text-green-400' : 'text-red-400' },
-]
+/* 3D card tilt on mouse move */
+function useTilt() {
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    const r  = el.getBoundingClientRect()
+    const x  = (e.clientX - r.left) / r.width
+    const y  = (e.clientY - r.top)  / r.height
+    const rx = (y - 0.5) * -18
+    const ry = (x - 0.5) * 18
+    el.style.transform = `perspective(600px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(10px) scale(1.02)`
+    el.style.transition = 'transform 0.08s ease'
+  }
+  const onLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.transform = ''
+    e.currentTarget.style.transition = 'transform 0.4s ease'
+  }
+  return { onMouseMove: onMove, onMouseLeave: onLeave }
+}
 
 export default function HomePage() {
-  const [transactions, setTransactions] = useState<TxDTO[]>([])
-  const [isLoading, setIsLoading]       = useState(true)
-  const [page, setPage]                 = useState(0)
-  const [totalPages, setTotalPages]     = useState(0)
+  const [transactions, setTransactions]   = useState<TxDTO[]>([])
+  const [isLoading, setIsLoading]         = useState(true)
+  const [page, setPage]                   = useState(0)
+  const [totalPages, setTotalPages]       = useState(0)
   const [totalElements, setTotalElements] = useState(0)
-  const [newTxCount, setNewTxCount]     = useState(0)
-  const [newTxHashes, setNewTxHashes]   = useState<Set<string>>(new Set())
-  const [whaleAmount, setWhaleAmount]   = useState<number | null>(null)
+  const [newTxCount, setNewTxCount]       = useState(0)
+  const [newTxHashes, setNewTxHashes]     = useState<Set<string>>(new Set())
+  const [whaleAmount, setWhaleAmount]     = useState<number | null>(null)
+  const [audioReady, setAudioReady]       = useState(false)
   const flashTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const tilt = useTilt()
+
+  // Check audio unlock state
+  useEffect(() => {
+    if (isAudioUnlocked()) { setAudioReady(true); return }
+    const check = () => { if (isAudioUnlocked()) setAudioReady(true) }
+    window.addEventListener('touchstart', check, { once: true, passive: true })
+    window.addEventListener('click',      check, { once: true })
+    return () => {
+      window.removeEventListener('touchstart', check)
+      window.removeEventListener('click', check)
+    }
+  }, [])
 
   const fetchTransactions = useCallback(async (p = 0) => {
     try {
@@ -36,11 +63,8 @@ export default function HomePage() {
       setTransactions(data.content)
       setTotalPages(data.totalPages)
       setTotalElements(data.totalElements)
-    } catch (e) {
-      console.error('Fetch error:', e)
-    } finally {
-      setIsLoading(false)
-    }
+    } catch (e) { console.error('Fetch error:', e) }
+    finally { setIsLoading(false) }
   }, [])
 
   useEffect(() => { fetchTransactions(0) }, [fetchTransactions])
@@ -55,10 +79,11 @@ export default function HomePage() {
       const t = setTimeout(() => {
         setNewTxHashes(prev => { const s = new Set(prev); s.delete(tx.txHash); return s })
         flashTimers.current.delete(tx.txHash)
-      }, 2400)
+      }, 2800)
       flashTimers.current.set(tx.txHash, t)
     }
-    if (Number(tx.valueUsdt) >= 5_000) setWhaleAmount(Number(tx.valueUsdt))
+    playForAmount(Number(tx.valueUsdt))
+    if (Number(tx.valueUsdt) >= 50_000) setWhaleAmount(Number(tx.valueUsdt))
     setNewTxCount(n => {
       const next = n + 1
       if (next % 10 === 0) fetchTransactions(page)
@@ -67,48 +92,79 @@ export default function HomePage() {
   }, [page, fetchTransactions])
 
   const { connected } = useTransferSocket(handleNewTx)
-
   const goToPage = (p: number) => { setPage(p); fetchTransactions(p) }
 
+  const stats = [
+    { label: 'CONTRACTS',   value: '4',                            icon: '📋', accent: 'rgba(6,182,212,0.7)',   sub: 'monitoring' },
+    { label: 'TOTAL TXS',   value: totalElements.toLocaleString(), icon: '⛓',  accent: 'rgba(99,102,241,0.7)',  sub: 'all time'   },
+    { label: 'NEW SESSION', value: `+${newTxCount.toLocaleString()}`, icon: '⚡', accent: 'rgba(234,179,8,0.7)', sub: 'since open' },
+    { label: 'STREAM',      value: connected ? 'LIVE' : 'OFFLINE', icon: connected ? '🟢' : '🔴',
+      accent: connected ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)', sub: 'websocket' },
+  ]
+
+  const tiers = [
+    { dot: 'bg-red-500',     label: '≥ 400K', icon: '💀', text: 'text-red-400'     },
+    { dot: 'bg-orange-500',  label: '≥ 200K', icon: '🔥', text: 'text-orange-400'  },
+    { dot: 'bg-yellow-400',  label: '≥ 100K', icon: '🐳', text: 'text-yellow-300'  },
+    { dot: 'bg-emerald-400', label: '≥ 50K',  icon: '💰', text: 'text-emerald-400' },
+  ]
+
   return (
-    <div className="relative min-h-screen text-zinc-100" style={{ position: 'relative', zIndex: 1 }}>
+    <div className="relative min-h-screen" style={{ zIndex: 1 }}>
+
+      {/* ── Background layers ── */}
+      <div className="orb orb-cyan"   aria-hidden />
+      <div className="orb orb-purple" aria-hidden />
+      <div className="orb orb-green"  aria-hidden />
+      <div className="perspective-floor" aria-hidden />
+
+      {/* ── Top border glow ── */}
+      <div className="fixed top-0 left-0 right-0 h-px z-50"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(6,182,212,0.8) 30%, rgba(139,92,246,0.7) 60%, transparent)' }} />
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-20 border-b border-white/[0.06] backdrop-blur-xl"
-        style={{ background: 'rgba(5,5,8,0.88)' }}>
-        <div className="mx-auto max-w-7xl px-5 py-3.5 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-white/[0.04]"
+        style={{ background: 'rgba(4,8,15,0.88)', backdropFilter: 'blur(24px)' }}>
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-4">
 
-          {/* Logo */}
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-green-500/15 border border-green-500/25 flex items-center justify-center text-sm shadow-[0_0_12px_rgba(34,197,94,0.2)]">
+            {/* Logo */}
+            <div className="flex items-center gap-2.5">
+              <div className="relative h-8 w-8 rounded-xl flex items-center justify-center text-sm font-black"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05))',
+                  border: '1px solid rgba(6,182,212,0.3)',
+                  boxShadow: '0 0 20px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  color: '#22d3ee',
+                }}>
                 ₮
               </div>
-              <span className="shimmer-text text-base font-bold tracking-tight">USDT Monitor</span>
+              <span className="shimmer-text text-sm font-black tracking-wide">USDT Monitor</span>
             </div>
 
-            <div className="hidden sm:flex items-center gap-1.5 text-[10px] border border-white/[0.07] rounded-full px-3 py-1 bg-white/[0.02]">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-400/60" />
-              <span className="text-zinc-500">ETH Mainnet</span>
-              <span className="text-zinc-700 mx-0.5">·</span>
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] tracking-[0.15em]"
+              style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.12)' }}>
+              <span className="h-1 w-1 rounded-full bg-cyan-400/70" />
+              <span className="text-cyan-600">ETH MAINNET</span>
+              <span className="text-zinc-700 mx-1">·</span>
               <a href="https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7"
                 target="_blank" rel="noopener noreferrer"
-                className="font-mono text-blue-500/80 hover:text-blue-400 transition-colors">
-                4 contracts
+                className="text-cyan-500/70 hover:text-cyan-300 transition-colors">
+                4 CONTRACTS
               </a>
             </div>
           </div>
 
-          {/* Right */}
           <div className="flex items-center gap-3">
             {totalElements > 0 && (
-              <span className="hidden sm:block text-[11px] text-zinc-600 font-mono tabular-nums">
-                {totalElements.toLocaleString()} total
+              <span className="hidden sm:block text-[10px] text-zinc-600 tabular-nums">
+                {totalElements.toLocaleString()} <span className="text-zinc-700">total</span>
               </span>
             )}
             {newTxCount > 0 && (
-              <span className="rounded-full bg-yellow-400/10 border border-yellow-400/20 px-3 py-1 text-[11px] font-bold text-yellow-400 tracking-wide shadow-[0_0_10px_rgba(234,179,8,0.15)]">
-                +{newTxCount}
+              <span className="px-3 py-1 rounded-full text-[10px] font-bold tabular-nums"
+                style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.25)', color: '#fbbf24', boxShadow: '0 0 16px rgba(234,179,8,0.15)' }}>
+                +{newTxCount.toLocaleString()}
               </span>
             )}
             <LiveBadge connected={connected} />
@@ -116,63 +172,95 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-5 py-5 relative z-10">
+      <main className="relative z-10 mx-auto max-w-7xl px-3 sm:px-6 py-4 sm:py-6">
 
-        {/* ── Stats ── */}
-        <div className="mb-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {STATS(totalElements, newTxCount, connected).map(({ label, value, icon, color }) => (
+        {/* ── Stats cards — 3D tilt ── */}
+        <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {stats.map(({ label, value, icon, accent, sub }) => (
             <div key={label}
-              className="stat-card gradient-border rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3.5 cursor-default">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-zinc-600 tracking-[0.2em] font-semibold">{label}</span>
-                <span className="text-base leading-none">{icon}</span>
+              {...tilt}
+              className="stat-card rounded-2xl p-4 cursor-default select-none"
+              style={{
+                '--accent': accent,
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+              } as React.CSSProperties}>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[9px] tracking-[0.28em] text-zinc-600 font-bold">{label}</span>
+                  <span className="text-lg leading-none">{icon}</span>
+                </div>
+                <div className="font-mono text-2xl font-black tabular-nums text-white"
+                  style={{ textShadow: `0 0 30px ${accent}` }}>
+                  {value}
+                </div>
+                <div className="mt-1.5 text-[9px] text-zinc-700 tracking-widest uppercase">{sub}</div>
               </div>
-              <div className={`font-mono text-lg font-bold tabular-nums ${color}`}>{value}</div>
             </div>
           ))}
         </div>
 
         {/* ── Tier legend ── */}
-        <div className="mb-3 flex items-center gap-4 px-1 flex-wrap">
-          {[
-            { color: 'bg-red-500',    label: '≥ 100K 💀', text: 'text-red-400'    },
-            { color: 'bg-orange-500', label: '≥ 50K 🔥', text: 'text-orange-400' },
-            { color: 'bg-yellow-500', label: '≥ 10K 🐳', text: 'text-yellow-400' },
-            { color: 'bg-green-500',  label: '≥ 5K 💰',  text: 'text-green-400'  },
-          ].map(({ color, label, text }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className={`h-2 w-2 rounded-full ${color}`} />
-              <span className={`text-[10px] font-mono ${text}`}>{label}</span>
-            </div>
-          ))}
-          <span className="text-zinc-700 text-[10px] ml-auto">USDT</span>
+        <div className="mb-3 flex items-center justify-between px-1">
+          <div className="flex items-center gap-5 flex-wrap">
+            {tiers.map(({ dot, label, icon, text }) => (
+              <div key={label} className="flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${dot}`} style={{ boxShadow: `0 0 6px currentColor` }} />
+                <span className={`text-[9px] font-mono tracking-wider ${text} opacity-80`}>{icon} {label}</span>
+              </div>
+            ))}
+          </div>
+          <span className="text-[9px] text-zinc-700 tracking-widest">USDT</span>
         </div>
 
-        {/* ── Table ── */}
-        <div className="rounded-2xl border border-white/[0.07] overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)]"
-          style={{ background: 'rgba(8,8,11,0.9)' }}>
-          <TxTable transactions={transactions} isLoading={isLoading} newTxHashes={newTxHashes} />
+        {/* ── Table — rotating border ── */}
+        <div className="border-glow-rotate rounded-2xl overflow-hidden"
+          style={{ boxShadow: '0 0 60px rgba(0,0,0,0.6), 0 0 30px rgba(6,182,212,0.05)' }}>
+          <div style={{ background: 'rgba(4,8,15,0.92)', borderRadius: 'inherit' }}>
+            <TxTable transactions={transactions} isLoading={isLoading} newTxHashes={newTxHashes} />
+          </div>
         </div>
 
         {/* ── Pagination ── */}
-        {totalPages > 0 && (
-          <div className="mt-5 flex items-center justify-center gap-3">
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-3">
             <button onClick={() => goToPage(page - 1)} disabled={page === 0}
-              className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 py-2 text-[11px] font-bold tracking-widest text-zinc-400 disabled:opacity-25 hover:border-green-500/30 hover:text-green-400 hover:bg-green-500/5 transition-all duration-200">
+              className="px-5 py-2 rounded-xl text-[10px] font-bold tracking-[0.2em] transition-all duration-200 disabled:opacity-20 hover:scale-105 active:scale-95"
+              style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)', color: '#67e8f9', boxShadow: '0 0 20px rgba(6,182,212,0.1)' }}>
               ← PREV
             </button>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.05] bg-white/[0.02]">
-              <span className="font-mono text-xs text-zinc-400 font-semibold">{page + 1}</span>
-              <span className="text-zinc-700">/</span>
-              <span className="font-mono text-xs text-zinc-600">{totalPages}</span>
+            <div className="px-4 py-2 rounded-xl text-xs"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <span className="font-mono font-bold text-zinc-300">{page + 1}</span>
+              <span className="text-zinc-700 mx-1.5">/</span>
+              <span className="font-mono text-zinc-600">{totalPages}</span>
             </div>
             <button onClick={() => goToPage(page + 1)} disabled={page >= totalPages - 1}
-              className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 py-2 text-[11px] font-bold tracking-widest text-zinc-400 disabled:opacity-25 hover:border-green-500/30 hover:text-green-400 hover:bg-green-500/5 transition-all duration-200">
+              className="px-5 py-2 rounded-xl text-[10px] font-bold tracking-[0.2em] transition-all duration-200 disabled:opacity-20 hover:scale-105 active:scale-95"
+              style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.15)', color: '#67e8f9', boxShadow: '0 0 20px rgba(6,182,212,0.1)' }}>
               NEXT →
             </button>
           </div>
         )}
       </main>
+
+      {/* Sound unlock prompt — mobile only */}
+      {!audioReady && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold tracking-widest animate-bounce"
+            style={{
+              background: 'rgba(6,182,212,0.12)',
+              border: '1px solid rgba(6,182,212,0.3)',
+              color: '#67e8f9',
+              boxShadow: '0 0 20px rgba(6,182,212,0.2)',
+              backdropFilter: 'blur(12px)',
+            }}>
+            <span>🔊</span>
+            <span>TAP TO ENABLE SOUND</span>
+          </div>
+        </div>
+      )}
 
       {whaleAmount !== null && (
         <WhaleExplosion amount={whaleAmount} onDone={() => setWhaleAmount(null)} />

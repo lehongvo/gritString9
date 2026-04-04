@@ -18,17 +18,17 @@ type Tier = {
 }
 
 function getTier(amount: number): Tier {
-  if (amount >= 100_000) return {
+  if (amount >= 400_000) return {
     level: 4, label: '💀 LEGENDARY', sub: 'MEGA WHALE',
     color: '#ff2200', glow: 'rgba(255,34,0,0.95)',
     duration: 6000, count: 400,
   }
-  if (amount >= 50_000) return {
+  if (amount >= 200_000) return {
     level: 3, label: '🔥 MEGA WHALE', sub: 'INSANE TX',
     color: '#ff8800', glow: 'rgba(255,136,0,0.95)',
     duration: 5000, count: 260,
   }
-  if (amount >= 10_000) return {
+  if (amount >= 100_000) return {
     level: 2, label: '🐳 WHALE ALERT', sub: 'BIG MOVE',
     color: '#ffd700', glow: 'rgba(255,215,0,0.95)',
     duration: 4500, count: 180,
